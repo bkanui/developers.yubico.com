@@ -1,0 +1,256 @@
+== PIV Walk-Through
+
+We are going to walk through setting up link:https://developers.yubico.com/PIV/[Yubico's PIV] for signing and encryption step by step.
+
+If you are an 'end-user', someone who needs to setup a Yubico device, (YubiKey) to login to an application or platform, this walk-through is the place to start.
+
+If you are a developer and plan to use the Yubico PIV device on a platform that does not have built-in PIV support, refer to the link:https://csrc.nist.gov/publications/detail/fips/201/2/final/[Personal Identity Verification (PIV) of Federal Employees and Contractors, FIPS 201-2] specification.
+
+TIP: This walk through is designed for people who prefer to *learn by doing*. If you prefer learning concepts from the ground up, check out our link:https://developers.yubico.com/PIV/Guides[PIV developers guide]. You might find this walk through and the guide are complementary to each other.
+
+The walk through is divided into several sections:
+
+* *Overview* describes fundamentals of PIV, Yubico server and client authentication, and SSH.
+
+* *Select your Use Case* lists typical use cases for YubiKey with PIV.
+
+* *Setup Prerequisites* provides a starting point for you to follow the walk through.
+
+* *Setup Your YubiKey* explains loading YubiKey certificates for use with SSH.
+
+* *PIV reset Command* describes the steps for returning the YubiKey to factory settings.
+
+
+
+=== Overview
+
+Configure your YubiKey with Personal Identity Verification (PIV) to register and authenticate your login to your platform. Server and client registration and authentication ceremonies are typically built into the platforms where the Yubico PIV device is used.
+
+PIV is based on the standard link:https://csrc.nist.gov/publications/detail/fips/201/2/final/[Personal Identity Verification (PIV) of Federal Employees and Contractors, FIPS 201-2]. This standard specifies a PIV system within which a common identity credential can be created and later used to verify a claimed identity.
+
+PIV enables RSA or ECC sign-in and encryption operations using a private key stored on a PIV Card Issued (PCI) smartcard (YubiKey), through common interfaces such as Public Key Cryptography Standard (PKCS), link:https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=pkcs11[OASIS PKCS #11].
+
+PIV authentication relies on a certificate chain of trust built into the  YubiKey to ensure that your user login is valid. The authenticating server trusts the certificate authority that issued the certificate. The chain of trust is a sequence of related enrollment data records that uses a central root certificate and delegates from the root down to the users login. The entire root path to the root certificate is included in a certificate of trust.
+
+
+
+=== Select Your Use Case
+
+As an end-user, the steps to complete the registration and authentication depend upon your platform and use case.
+
+To setup your YubiKey using the PIV protocol, complete the steps in the topics for your use case.
+
+ * For Windows, using the YubiKey Minidriver, see link:https://support.yubico.com/support/solutions/articles/15000006456-yubikey-smart-card-deployment-guide[YubiKey Smart Card Deployment Guide]
+
+ * For MacOS, see link:https://support.yubico.com/support/solutions/articles/15000006468-using-your-yubikey-as-a-smart-card-in-macos[Using Your YubiKey as a Smart Card in macOS]
+
+ * For MacOS computer on a Windows Domain, see Native Smart Card Support in MacOS - https://support.yubico.com/support/solutions/articles/15000010854-macos-native-smart-card-support-for-logon-with-windows-server[macOS Native Smart Card Support for Logon with Windows Server]
+
+ * For Linux OSes, see link:https://developers.yubico.com/yubico-pam/[Yubico PAM Module]
+
+ * For Using the YubiKey as a smart card over a browser, see https://developers.yubico.com/yubico-piv-tool/YKCS11/Supported_applications/firefox.html[Firefox]
+
+ * For SSH with PIV and PKCS11, see the steps listed below. The balance of this walk-through describes setting up your Yubikey for SSH using the PIV protocol.
+
+Optionally, you can purchase third party Card Management Solutions (CMS) systems that handle all setting PIN, PUK, load certificates, are similar to Windows, and provide more options. If using one of these solutions, see their documentation, and verify they support YubiKey. Then follow their steps for managing your YubiKey authentication processes.
+
+
+
+==== About SSH
+
+Secure Shell (SSH) is a protocol for secure communication between a local and remote system, typically servers. Using SSH you can transfer files between the systems, and execute commands on the remote system. See link:https://www.ssh.com/ssh/[SSH (Secure Shell)].
+
+SSH supports certificates, such as the PIV certificates with YuibKey, for authentication between users and systems.
+
+Key pairs are used to verify both the device (YubiKey) and the user. A key pair has a public key and a private key or management key.
+
+* *public key* is the stored on the authenticating server. The value is retrieved for the device and used to validate the device.
+
+* *private key* is stored on the device (YubiKey). You enter the value and the value used to validate your access through the YubiKey.
+
+* *management key* is stored on the authenticating server. This is the administrative key, also known as a symmetric key. Both the administrator and the device (YubiKey) use the management key.
+
+The SSH steps listed below can be adapted to other manual YubiKey with PIV configuration.
+
+=== Setup Prerequisites
+
+Which tools you need to download and install depend upon your use case. The prerequisites are grouped by task requirement: Certificate related and Configuration related.
+
+Where there are options, select the download specific to the operating system of the administrative system.
+
+*Step 1* Download the Yubico tools for loading chain of trust certificates onto your YubiKey.
+
+*NEO Manager GUI Tool*
+
+The Yubico NEO Manager is available for Windows, MacOS, and Linux. Download the installers and installation instructions from the Yubico website using the links below.
+
+   * link:https://developers.yubico.com/yubikey-neo-manager/Usage.html[NEO Manager installation instructions]
+
+   * link:http://yubi.co/NEOMgrWin[NEO Manager for Windows]
+
+   * link:http://yubi.co/NEOMgrMac[NEO Manager for MacOS]
+
+   * link:http://yubi.co/NEOMrgLux[NEO Manager for Linux]
+
+Optionally, download the NEO Manager for your operating system, from the link:https://developers.yubico.com/yubikey-neo-manager/Releases/[YubiKey Neo Manager releases] page. Be sure to also download the link:https://developers.yubico.com/Software_Projects/Software_Signing.html[signature files].
+
+
+*Step 2* Download the tools for creating your YubiKey PIV module.
+
+For introduction descriptions, see:
+link:https://www.yubico.com/products/services-software/download/smart-card-drivers-tools/[Smart card drivers and tools] and
+link:https://developers.yubico.com/PIV/Tools.html[Tools: YubiKey Manager (ykman) and PIV Tool].
+
+*YubiKey Manager (GUI)* link:https://www.yubico.com/products/services-software/download/yubikey-manager/[YubiKey Manager]
+
+Use the YubiKey Manager to configure FIDO2, OTP and PIV functionality on your YubiKey on Windows, macOS, and Linux operating systems. The tool works with any currently supported YubiKey. You can also use the tool to check the type and firmware of a YubiKey. In addition, you can use the extended settings to specify other features, such as to configure 3-second long touch.
+
+
+*PIV Tool (CLI)* link:https://developers.yubico.com/yubikey-manager/[YubiKey PIV Tool Manager CLI]
+
+The YubiKey Manager CLI tool ykman can be used to configure all aspects of the YubiKey.
+
+
+*Yubico PKCS #11 Engine* link:https://developers.yubico.com/yubico-piv-tool/YKCS11/[YKCS11]
+
+`ykman` is a PKCS#11 module that allows external applications to communicate with the PIV application running on a YubiKey.
+
+
+
+
+
+
+
+=== Setup Your YubiKey
+
+The steps here are for adding certificates on a YubiKey for use with SSH on PKCS11.
+
+Public key authentication with OpenSSH through PKCS#11. For additional reference, see link:https://developers.yubico.com/PIV/Guides/SSH_with_PIV_and_PKCS11.html[Using PIV for SSH through PKCS #11]. Examples below are for MacOS and Linux systems.
+
+==== Setup Overview
+
+The steps to enable your login using the PIV protocol vary depending upon the operating system, but generally include steps for handling certificate authority (CA). The link:https://developers.yubico.com/yubikey-neo-manager/Usage.html[Yubikey NEO Manager] handles most of these tasks.
+
+*1.* Import or generate a key in the device slot.
+
+*2.* Create self-signed certificate for that key.
+
+*3.* Load the certificate.
+
+*4.* Locate the module.
+
+*5.* Export the public key.
+
+*6.* Authenticate to the target system.
+
+*7.* Optionally, set up to work with ssh-agent.
+
+
+==== Task Prerequisites
+In addition to those listed above, install:
+
+ * OpenSSH
+
+ * For Apple products: OS X or iOS 10.13 or later
+
+
+==== Procedure
+*Step 1* Import or generate a key in any slot.
+
+If an external key has been imported and certificate exists, skip to Step 2.
+
+* Import the key in PEM format.
+
+`$ yubico-piv-tool -s 9a -a import-key -i key.pem`
+
+* Generate the key.
+
+`$ yubico-piv-tool -s 9a -a generate -o public.pem`
+
+*Step 2* Create a self-signed certificate for that key and load the certificate.
+
+a) Create certificate for the key.
+
+`$ yubico-piv-tool -a verify-pin -a selfsign-certificate -s 9a -S "/CN=SSH key/" -i public.pem -o cert.pem`
+
+b) Load the certificate.
+
+`$ yubico-piv-tool -a import-certificate -s 9a -i cert.pem`
+
+*Step 3* Locate your local YKCS11 installation.
+
+For Debian-based system, `/usr/local/lib/libykcs11`
+
+For MacOS, `/usr/local/lib/libykcs11.dylib`
+
+*Step 4* Export the public key in the correct SSH format and add it to authorized_keys on the target system.
+
+`$ ssh-keygen -D XXX/libykcs11.so -e`
+
+The command exports all the keys stored on the YubiKey. They are exported in order. Refer to this order to identify the public key associated with your targeted private key.
+
+*Step 5* Authenticate to the target system using the new key.
+
+a) Authenticate the key.
+
+`$ ssh -I XXX/libykcs11.so user@remote.example.com`
+
+b) Optionally, set this up to work with ssh-agent.
+
+`$ ssh-add -s XXX/libykcs11.so`
+
+*Step 6* Confirm that the ssh-agent locates the correct key and public key.
+
+`$ ssh-add -L`
+
+
+=== PIV reset Command
+
+In the event that you cannot login due to exceeding the retry login limit, and blocked both your Personal Identification Number (PIN), and your PIN Unblock Key (PUK), you can reset all the PIV data on your YubiKey to factory settings.
+
+The reset commands reset all your PIV data. This action wipes all data and restores factory settings for the PIV application on your YubiKey.
+
+IMPORTANT: This removes all information on your YubiKey. The information cannot be recovered.
+
+
+The reset commands are available through the PIVtool and YKman.
+
+
+==== PIVtool reset Command
+
+From the YubiKey command interface on your computer, with PIVtool installed:
+
+*1.* Manually lock the PIN and PUK. See the PIVtool documentation for steps.
+
+*2.* Run the command:
+
+`$ yubico-piv-tool -areset`
+
+
+==== YKman reset Command
+
+From the YubiKey command interface on your computer, with YKman installed:
+
+*1.* Run the command:
+
+`$ ykman piv reset [OPTIONS]`
+
+Options:
+
+-f, --force Confirm the action without prompting.
+
+-h, --help Show this message and exit.
+
+The YKman command automatically locks the PIN and PUK. Then proceed to reset the PIV data.
+
+
+=== Help, I’m Stuck!
+
+If you get stuck, you can check link: https://www.openPIV.org/community/[OpenPIV community] pages or the link:https://www.gnupg.org/index.html[GnuPG] pages.
+
+If you don’t receive and answer, or remain stuck, please file an issue or open a support ticket and we’ll help you out.
+
+
+
+=== Wrapping up
+Congratulations! You've completed all the steps to encrypt and authenticate with a PIV credential.
